@@ -13,13 +13,16 @@ const server = https.createServer(options, function (req, res) {
   res.end()
 })
 
-server.on('connection', function (socket) {
-  console.log('got socket')
-  socket.on('close', function () {
-    console.log('closed socket')
-  })
-})
-
 server.listen(8080, function () {
   console.log(server.address())
+
+  const client = https.request({ port: 8080 }, res => {
+    let data = ''
+    res
+      .on('end', () => console.log(data))
+      .on('data', (chunk) => {
+        data += chunk
+      })
+  })
+  client.end()
 })

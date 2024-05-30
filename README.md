@@ -8,7 +8,7 @@ npm i bare-https
 
 ## Usage
 
-``` js
+```js
 const https = require('bare-https')
 
 // Same API as Node.js

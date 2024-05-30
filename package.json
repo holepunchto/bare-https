@@ -7,8 +7,7 @@
     "./package": "./package.json"
   },
   "files": [
-    "index.js",
-    "lib"
+    "index.js"
   ],
   "scripts": {
     "test": "standard && bare test.js"
@@ -24,9 +23,9 @@
   },
   "homepage": "https://github.com/holepunchto/bare-https#readme",
   "dependencies": {
-    "bare-http1": "^3.1.0",
+    "bare-http1": "^3.5.0",
     "bare-tcp": "^1.1.2",
-    "bare-tls": "^1.0.0"
+    "bare-tls": "^1.0.2"
   },
   "devDependencies": {
     "bare-fs": "^2.2.3",
