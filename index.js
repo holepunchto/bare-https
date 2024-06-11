@@ -2,6 +2,16 @@ const tcp = require('bare-tcp')
 const tls = require('bare-tls')
 const http = require('bare-http1')
 
+const Agent = exports.Agent = class HTTPSAgent extends http.Agent {
+  createConnection (opts) {
+    return new tls.Socket(super.createConnection(opts), opts)
+  }
+
+  static global = new this({ keepAlive: 1000, timeout: 5000 })
+}
+
+exports.globalAgent = Agent.global
+
 const Server = exports.Server = class HTTPSServer extends tcp.Server {
   constructor (opts = {}, onrequest) {
     if (typeof opts === 'function') {
@@ -39,7 +49,7 @@ exports.request = function request (url, opts, onresponse) {
     opts = url ? { ...url } : {}
   }
 
-  opts.connection = new http.ClientConnection(new tls.Socket(tcp.createConnection(opts), opts))
+  opts.agent = opts.agent === false ? new Agent() : opts.agent || Agent.global
 
   return new http.ClientRequest(opts, onresponse)
 }
