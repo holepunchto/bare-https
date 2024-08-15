@@ -39,7 +39,7 @@ exports.request = function request (url, opts, onresponse) {
 
   if (typeof url === 'string') url = new URL(url)
 
-  if (URL.isURL(url)) {
+  if (isURL(url)) {
     opts = opts ? { ...opts } : {}
 
     opts.host = url.hostname
@@ -47,6 +47,10 @@ exports.request = function request (url, opts, onresponse) {
     opts.port = url.port ? parseInt(url.port, 10) : defaultPort(url)
   } else {
     opts = url ? { ...url } : {}
+
+    // For Node.js compatibility
+    opts.host = opts.hostname || opts.host
+    opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
   opts.agent = opts.agent === false ? new Agent() : opts.agent || Agent.global
@@ -65,4 +69,16 @@ function defaultPort (url) {
   }
 
   return null
+}
+
+// https://url.spec.whatwg.org/#api
+function isURL (url) {
+  return (
+    url !== null &&
+    typeof url === 'object' &&
+    typeof url.protocol === 'string' &&
+    typeof url.hostname === 'string' &&
+    typeof url.pathname === 'string' &&
+    typeof url.search === 'string'
+  )
 }
