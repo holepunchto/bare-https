@@ -21,9 +21,35 @@ const Server = exports.Server = class HTTPSServer extends tcp.Server {
 
     super({ allowHalfOpen: false })
 
+    this._timeout = 0
+
     this.on('connection', (socket) => new http.ServerConnection(this, new tls.Socket(socket, { ...opts, isServer: true }), opts))
 
     if (onrequest) this.on('request', onrequest)
+  }
+
+  get timeout () {
+    return this._timeout || undefined // For Node.js compatibility
+  }
+
+  setTimeout (ms = 0, ontimeout) {
+    if (ontimeout) this.on('timeout', ontimeout)
+
+    this._timeout = ms
+
+    return this
+  }
+
+  close (onclose) {
+    super.close(onclose)
+
+    for (const socket of this._connections) {
+      const connection = http.ServerConnection.for(socket)
+
+      if (connection && connection.idle) {
+        socket.destroy()
+      }
+    }
   }
 }
 
@@ -53,7 +79,10 @@ exports.request = function request (url, opts, onresponse) {
     opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
-  opts.agent = opts.agent === false ? new Agent() : opts.agent || Agent.global
+  // TODO: Renable the default global agent when tests have been sorted
+  // opts.agent = opts.agent === false ? new Agent() : opts.agent || Agent.global
+
+  opts.agent = opts.agent || new Agent()
 
   return new http.ClientRequest(opts, onresponse)
 }
