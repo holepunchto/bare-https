@@ -28,7 +28,7 @@
     "bare-tls": "^1.0.2"
   },
   "devDependencies": {
-    "bare-fs": "^2.2.3",
+    "bare-fs": "^3.0.0",
     "brittle": "^3.3.0",
     "standard": "^17.0.0"
   }
