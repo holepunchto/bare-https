@@ -23,12 +23,12 @@
   },
   "homepage": "https://github.com/holepunchto/bare-https#readme",
   "dependencies": {
-    "bare-http1": "^3.8.0",
-    "bare-tcp": "^1.1.2",
-    "bare-tls": "^1.0.2"
+    "bare-http1": "^4.0.0",
+    "bare-tcp": "^2.0.0",
+    "bare-tls": "^2.0.0"
   },
   "devDependencies": {
-    "bare-fs": "^3.0.0",
+    "bare-fs": "^4.0.0",
     "brittle": "^3.3.0",
     "prettier": "^3.4.1",
     "prettier-config-standard": "^7.0.0"
