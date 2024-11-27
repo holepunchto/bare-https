@@ -16,7 +16,7 @@ const server = https.createServer(options, function (req, res) {
 server.listen(8080, function () {
   console.log(server.address())
 
-  const client = https.request({ port: 8080 }, res => {
+  const client = https.request({ port: 8080 }, (res) => {
     let data = ''
     res
       .on('end', () => console.log(data))

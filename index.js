@@ -2,18 +2,18 @@ const tcp = require('bare-tcp')
 const tls = require('bare-tls')
 const http = require('bare-http1')
 
-const Agent = exports.Agent = class HTTPSAgent extends http.Agent {
-  createConnection (opts) {
+exports.Agent = class HTTPSAgent extends http.Agent {
+  createConnection(opts) {
     return new tls.Socket(super.createConnection(opts), opts)
   }
 
   static global = new this({ keepAlive: 1000, timeout: 5000 })
 }
 
-exports.globalAgent = Agent.global
+exports.globalAgent = exports.Agent.global
 
-const Server = exports.Server = class HTTPSServer extends tcp.Server {
-  constructor (opts = {}, onrequest) {
+exports.Server = class HTTPSServer extends tcp.Server {
+  constructor(opts = {}, onrequest) {
     if (typeof opts === 'function') {
       onrequest = opts
       opts = {}
@@ -23,16 +23,24 @@ const Server = exports.Server = class HTTPSServer extends tcp.Server {
 
     this._timeout = 0
 
-    this.on('connection', (socket) => new http.ServerConnection(this, new tls.Socket(socket, { ...opts, isServer: true }), opts))
+    this.on(
+      'connection',
+      (socket) =>
+        new http.ServerConnection(
+          this,
+          new tls.Socket(socket, { ...opts, isServer: true }),
+          opts
+        )
+    )
 
     if (onrequest) this.on('request', onrequest)
   }
 
-  get timeout () {
+  get timeout() {
     return this._timeout || undefined // For Node.js compatibility
   }
 
-  setTimeout (ms = 0, ontimeout) {
+  setTimeout(ms = 0, ontimeout) {
     if (ontimeout) this.on('timeout', ontimeout)
 
     this._timeout = ms
@@ -40,7 +48,7 @@ const Server = exports.Server = class HTTPSServer extends tcp.Server {
     return this
   }
 
-  close (onclose) {
+  close(onclose) {
     super.close(onclose)
 
     for (const socket of this._connections) {
@@ -53,11 +61,11 @@ const Server = exports.Server = class HTTPSServer extends tcp.Server {
   }
 }
 
-exports.createServer = function createServer (opts, onrequest) {
-  return new Server(opts, onrequest)
+exports.createServer = function createServer(opts, onrequest) {
+  return new exports.Server(opts, onrequest)
 }
 
-exports.request = function request (url, opts, onresponse) {
+exports.request = function request(url, opts, onresponse) {
   if (typeof opts === 'function') {
     onresponse = opts
     opts = {}
@@ -76,32 +84,36 @@ exports.request = function request (url, opts, onresponse) {
 
     // For Node.js compatibility
     opts.host = opts.hostname || opts.host
-    opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
+    opts.port =
+      typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
   // TODO: Renable the default global agent when tests have been sorted
   // opts.agent = opts.agent === false ? new Agent() : opts.agent || Agent.global
 
-  opts.agent = opts.agent || new Agent()
+  opts.agent = opts.agent || new exports.Agent()
 
   return new http.ClientRequest(opts, onresponse)
 }
 
 // https://url.spec.whatwg.org/#default-port
-function defaultPort (url) {
+function defaultPort(url) {
   switch (url.protocol) {
-    case 'ftp:': return 21
+    case 'ftp:':
+      return 21
     case 'http:':
-    case 'ws:': return 80
+    case 'ws:':
+      return 80
     case 'https:':
-    case 'wss:': return 443
+    case 'wss:':
+      return 443
   }
 
   return null
 }
 
 // https://url.spec.whatwg.org/#api
-function isURL (url) {
+function isURL(url) {
   return (
     url !== null &&
     typeof url === 'object' &&

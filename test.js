@@ -23,14 +23,19 @@ test('basic', async function (t) {
       t.pass('server socket closed')
     })
 
-    socket.on('error', (err) => t.fail('server socket error: ' + err.message + ' (' + err.code + ')'))
+    socket.on('error', (err) =>
+      t.fail('server socket error: ' + err.message + ' (' + err.code + ')')
+    )
   })
 
   server.on('request', function (req, res) {
     t.ok(req)
     t.is(req.method, 'GET')
     t.is(req.url, '/something/?key1=value1&key2=value2&enabled')
-    t.is(req.headers.host, server.address().address + ':' + server.address().port)
+    t.is(
+      req.headers.host,
+      server.address().address + ':' + server.address().port
+    )
     t.ok(req.socket)
 
     t.ok(res)
@@ -66,16 +71,19 @@ test('basic', async function (t) {
   server.listen(0)
   await waitForServer(server)
 
-  const reply = await request({
-    method: 'GET',
-    host: server.address().address,
-    port: server.address().port,
-    path: '/something/?key1=value1&key2=value2&enabled',
-    headers: { 'Content-Length': 12 }
-  }, (req) => {
-    req.write('body message')
-    req.end()
-  })
+  const reply = await request(
+    {
+      method: 'GET',
+      host: server.address().address,
+      port: server.address().port,
+      path: '/something/?key1=value1&key2=value2&enabled',
+      headers: { 'Content-Length': 12 }
+    },
+    (req) => {
+      req.write('body message')
+      req.end()
+    }
+  )
 
   t.absent(reply.error)
   t.is(reply.response.statusCode, 200)
@@ -87,12 +95,12 @@ test('basic', async function (t) {
   server.on('close', () => t.pass('server closed'))
 })
 
-function waitForServer (server) {
+function waitForServer(server) {
   return new Promise((resolve, reject) => {
     server.on('listening', done)
     server.on('error', done)
 
-    function done (error) {
+    function done(error) {
       server.removeListener('listening', done)
       server.removeListener('error', done)
       error ? reject(error) : resolve()
@@ -100,7 +108,7 @@ function waitForServer (server) {
   })
 }
 
-function request (opts, cb) {
+function request(opts, cb) {
   return new Promise((resolve) => {
     const client = https.request(opts)
 
@@ -111,7 +119,12 @@ function request (opts, cb) {
     })
 
     client.on('response', function (res) {
-      const r = result.response = { statusCode: res.statusCode, headers: res.headers, ended: false, chunks: [] }
+      const r = (result.response = {
+        statusCode: res.statusCode,
+        headers: res.headers,
+        ended: false,
+        chunks: []
+      })
       r.statusCode = res.statusCode
       res.on('data', (chunk) => r.chunks.push(chunk))
       res.on('end', () => {
@@ -120,7 +133,10 @@ function request (opts, cb) {
     })
 
     client.on('close', () => {
-      if (result.response) result.response.chunks = result.response.chunks.map(c => Buffer.from(c, 'hex'))
+      if (result.response)
+        result.response.chunks = result.response.chunks.map((c) =>
+          Buffer.from(c, 'hex')
+        )
       resolve(result)
     })
 
