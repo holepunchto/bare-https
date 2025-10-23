@@ -34,7 +34,7 @@ class HTTPSSocket extends tls.Socket {
   }
 }
 
-exports.Agent = class HTTPSAgent extends http.Agent {
+class HTTPSAgent extends http.Agent {
   createConnection(opts) {
     return new HTTPSSocket(super.createConnection(opts), opts)
   }
@@ -42,9 +42,28 @@ exports.Agent = class HTTPSAgent extends http.Agent {
   static global = new this({ keepAlive: 1000, timeout: 5000 })
 }
 
-exports.globalAgent = exports.Agent.global
+exports.Agent = HTTPSAgent
 
-exports.Server = class HTTPSServer extends tcp.Server {
+exports.globalAgent = HTTPSAgent.global
+
+class HTTPSClientRequest extends http.ClientRequest {
+  constructor(opts = {}, onresponse = null) {
+    if (typeof opts === 'function') {
+      onresponse = opts
+      opts = {}
+    }
+
+    opts = opts ? { ...opts } : {}
+
+    opts.agent = opts.agent === false ? new HTTPSAgent() : opts.agent || HTTPSAgent.global
+
+    super(opts, onresponse)
+  }
+}
+
+exports.ClientRequest = HTTPSClientRequest
+
+class HTTPSServer extends tcp.Server {
   constructor(opts = {}, onrequest) {
     if (typeof opts === 'function') {
       onrequest = opts
@@ -91,8 +110,10 @@ exports.Server = class HTTPSServer extends tcp.Server {
   }
 }
 
+exports.Server = HTTPSServer
+
 exports.createServer = function createServer(opts, onrequest) {
-  return new exports.Server(opts, onrequest)
+  return new HTTPSServer(opts, onrequest)
 }
 
 exports.request = function request(url, opts, onresponse) {
@@ -117,9 +138,7 @@ exports.request = function request(url, opts, onresponse) {
     opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
-  opts.agent = opts.agent === false ? new exports.Agent() : opts.agent || exports.Agent.global
-
-  return new http.ClientRequest(opts, onresponse)
+  return new HTTPSClientRequest(opts, onresponse)
 }
 
 // https://url.spec.whatwg.org/#default-port
