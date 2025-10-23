@@ -1,119 +1,12 @@
-const tcp = require('bare-tcp')
-const tls = require('bare-tls')
-const http = require('bare-http1')
+exports.Agent = require('./lib/agent')
+exports.globalAgent = exports.Agent.global
 
-class HTTPSSocket extends tls.Socket {
-  setKeepAlive(...args) {
-    this.socket.setKeepAlive(...args)
+exports.Server = require('./lib/server')
 
-    return this
-  }
-
-  setNoDelay(...args) {
-    this.socket.setNoDelay(...args)
-
-    return this
-  }
-
-  setTimeout(...args) {
-    this.socket.setTimeout(...args)
-
-    return this
-  }
-
-  ref() {
-    this.socket.ref()
-
-    return this
-  }
-
-  unref() {
-    this.socket.unref()
-
-    return this
-  }
-}
-
-class HTTPSAgent extends http.Agent {
-  createConnection(opts) {
-    return new HTTPSSocket(super.createConnection(opts), opts)
-  }
-
-  static global = new this({ keepAlive: 1000, timeout: 5000 })
-}
-
-exports.Agent = HTTPSAgent
-
-exports.globalAgent = HTTPSAgent.global
-
-class HTTPSClientRequest extends http.ClientRequest {
-  constructor(opts = {}, onresponse = null) {
-    if (typeof opts === 'function') {
-      onresponse = opts
-      opts = {}
-    }
-
-    opts = opts ? { ...opts } : {}
-
-    opts.agent = opts.agent === false ? new HTTPSAgent() : opts.agent || HTTPSAgent.global
-
-    super(opts, onresponse)
-  }
-}
-
-exports.ClientRequest = HTTPSClientRequest
-
-class HTTPSServer extends tcp.Server {
-  constructor(opts = {}, onrequest) {
-    if (typeof opts === 'function') {
-      onrequest = opts
-      opts = {}
-    }
-
-    super({ allowHalfOpen: false })
-
-    this._timeout = 0
-
-    this.on(
-      'connection',
-      (socket) =>
-        new http.ServerConnection(this, new HTTPSSocket(socket, { ...opts, isServer: true }), opts)
-    )
-
-    if (onrequest) this.on('request', onrequest)
-  }
-
-  get timeout() {
-    return this._timeout || undefined // For Node.js compatibility
-  }
-
-  setTimeout(ms = 0, ontimeout) {
-    if (ontimeout) this.on('timeout', ontimeout)
-
-    this._timeout = ms
-
-    return this
-  }
-
-  close(onclose) {
-    super.close(onclose)
-
-    for (const socket of this._connections) {
-      const connection = http.ServerConnection.for(socket)
-
-      if (connection === null || connection.idle) {
-        socket.destroy()
-      }
-    }
-
-    return this
-  }
-}
-
-exports.Server = HTTPSServer
+exports.ClientRequest = require('./lib/client-request')
 
 exports.createServer = function createServer(opts, onrequest) {
-  return new HTTPSServer(opts, onrequest)
+  return new exports.Server(opts, onrequest)
 }
 
 exports.request = function request(url, opts, onresponse) {
@@ -138,7 +31,7 @@ exports.request = function request(url, opts, onresponse) {
     opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
-  return new HTTPSClientRequest(opts, onresponse)
+  return new exports.ClientRequest(opts, onresponse)
 }
 
 // https://url.spec.whatwg.org/#default-port

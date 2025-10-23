@@ -13,29 +13,27 @@ import { TCPSocket, TCPSocketOptions, TCPSocketConnectOptions } from 'bare-tcp'
 export interface HTTPSSocketOptions
   extends TLSSocketOptions,
     TCPSocketOptions,
-    TCPSocketConnectOptions {
-  isServer?: boolean
-}
+    TCPSocketConnectOptions {}
 
 export interface HTTPSSocket extends TLSSocket, TCPSocket {}
 
-export class HTTPSSocket {}
+class HTTPSSocket extends TLSSocket, TCPSocket {}
 
 export interface HTTPSAgent extends HTTPAgent {
   createConnection(opts?: HTTPSSocketOptions): HTTPSSocket
 }
 
-export class HTTPSAgent {
+class HTTPSAgent extends HTTPAgent {
   static global: HTTPSAgent
 }
 
-export { HTTPSAgent as Agent }
-
 export const globalAgent: HTTPSAgent
+
+export { HTTPSAgent as Agent }
 
 export interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerConnectionOptions {}
 
-export class HTTPSServer extends HTTPServer {
+class HTTPSServer extends HTTPServer {
   constructor(
     opts?: HTTPSServerOptions,
     onrequest?: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void
@@ -46,6 +44,20 @@ export class HTTPSServer extends HTTPServer {
 
 export { HTTPSServer as Server }
 
+export interface HTTPSClientRequestOptions extends HTTPClientRequestOptions {
+  agent?: HTTPSAgent | false
+}
+
+export interface HTTPSClientRequest extends HTTPClientRequest {}
+
+class HTTPSClientRequest extends HTTPClientRequest {
+  constructor(opts?: HTTPSClientRequestOptions, onresponse?: () => void)
+
+  constructor(onresponse: () => void)
+}
+
+export { HTTPClientRequest as ClientRequest }
+
 export function createServer(
   opts?: HTTPSServerOptions,
   onrequest?: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void
@@ -55,22 +67,18 @@ export function createServer(
   onrequest: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void
 ): HTTPSServer
 
-export interface HTTPSClientRequestOptions extends HTTPClientRequestOptions {
-  agent?: HTTPSAgent | false
-}
-
 export function request(
   url: URL | string,
   opts?: HTTPSClientRequestOptions,
   onresponse?: (res: HTTPIncomingMessage) => void
-): HTTPClientRequest
+): HTTPSClientRequest
 
 export function request(
   url: URL | string,
   onresponse: (res: HTTPIncomingMessage) => void
-): HTTPClientRequest
+): HTTPSClientRequest
 
 export function request(
   opts: HTTPSClientRequestOptions,
   onresponse?: (res: HTTPIncomingMessage) => void
-): HTTPClientRequest
+): HTTPSClientRequest
