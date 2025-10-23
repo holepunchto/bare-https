@@ -82,7 +82,7 @@ exports.Server = class HTTPSServer extends tcp.Server {
     for (const socket of this._connections) {
       const connection = http.ServerConnection.for(socket)
 
-      if (connection && connection.idle) {
+      if (connection === null || connection.idle) {
         socket.destroy()
       }
     }
@@ -117,13 +117,7 @@ exports.request = function request(url, opts, onresponse) {
     opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
-  // TODO: Renable the default global agent when tests have been sorted
-  // opts.agent =
-  //   opts.agent === false
-  //     ? new exports.Agent()
-  //     : opts.agent || exports.Agent.global
-
-  opts.agent = opts.agent || new exports.Agent()
+  opts.agent = opts.agent === false ? new exports.Agent() : opts.agent || exports.Agent.global
 
   return new http.ClientRequest(opts, onresponse)
 }
