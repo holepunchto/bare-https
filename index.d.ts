@@ -33,9 +33,7 @@ export { HTTPSAgent as Agent }
 
 export const globalAgent: HTTPSAgent
 
-export interface HTTPSServerOptions
-  extends HTTPSSocketOptions,
-    HTTPServerConnectionOptions {}
+export interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerConnectionOptions {}
 
 export class HTTPSServer extends HTTPServer {
   constructor(
@@ -43,9 +41,7 @@ export class HTTPSServer extends HTTPServer {
     onrequest?: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void
   )
 
-  constructor(
-    onrequest: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void
-  )
+  constructor(onrequest: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void)
 }
 
 export { HTTPSServer as Server }

@@ -32,10 +32,7 @@ test('basic', async function (t) {
     t.ok(req)
     t.is(req.method, 'GET')
     t.is(req.url, '/something/?key1=value1&key2=value2&enabled')
-    t.is(
-      req.headers.host,
-      server.address().address + ':' + server.address().port
-    )
+    t.is(req.headers.host, server.address().address + ':' + server.address().port)
     t.ok(req.socket)
 
     t.ok(res)
@@ -134,9 +131,7 @@ function request(opts, cb) {
 
     client.on('close', () => {
       if (result.response)
-        result.response.chunks = result.response.chunks.map((c) =>
-          Buffer.from(c, 'hex')
-        )
+        result.response.chunks = result.response.chunks.map((c) => Buffer.from(c, 'hex'))
       resolve(result)
     })
 

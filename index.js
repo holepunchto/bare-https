@@ -54,11 +54,7 @@ exports.Server = class HTTPSServer extends tcp.Server {
     this.on(
       'connection',
       (socket) =>
-        new http.ServerConnection(
-          this,
-          new HTTPSSocket(socket, { ...opts, isServer: true }),
-          opts
-        )
+        new http.ServerConnection(this, new HTTPSSocket(socket, { ...opts, isServer: true }), opts)
     )
 
     if (onrequest) this.on('request', onrequest)
@@ -112,8 +108,7 @@ exports.request = function request(url, opts, onresponse) {
 
     // For Node.js compatibility
     opts.host = opts.hostname || opts.host
-    opts.port =
-      typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
+    opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
   }
 
   // TODO: Renable the default global agent when tests have been sorted
