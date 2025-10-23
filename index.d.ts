@@ -17,7 +17,7 @@ export interface HTTPSSocketOptions
 
 export interface HTTPSSocket extends TLSSocket, TCPSocket {}
 
-class HTTPSSocket extends TLSSocket, TCPSocket {}
+class HTTPSSocket extends TLSSocket {}
 
 export interface HTTPSAgent extends HTTPAgent {
   createConnection(opts?: HTTPSSocketOptions): HTTPSSocket
