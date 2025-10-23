@@ -23,10 +23,14 @@ class HTTPSSocket extends tls.Socket {
 
   ref() {
     this.socket.ref()
+
+    return this
   }
 
   unref() {
     this.socket.unref()
+
+    return this
   }
 }
 
@@ -82,6 +86,8 @@ exports.Server = class HTTPSServer extends tcp.Server {
         socket.destroy()
       }
     }
+
+    return this
   }
 }
 
