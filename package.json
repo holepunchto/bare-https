@@ -29,7 +29,7 @@
   "homepage": "https://github.com/holepunchto/bare-https#readme",
   "dependencies": {
     "bare-http1": "^4.0.0",
-    "bare-tcp": "^2.0.0",
+    "bare-tcp": "^2.2.0",
     "bare-tls": "^2.0.0"
   },
   "devDependencies": {
