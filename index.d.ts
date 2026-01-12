@@ -11,9 +11,7 @@ import {
 import { TCPSocket, TCPSocketOptions, TCPSocketConnectOptions } from 'bare-tcp'
 
 export interface HTTPSSocketOptions
-  extends TLSSocketOptions,
-    TCPSocketOptions,
-    TCPSocketConnectOptions {}
+  extends TLSSocketOptions, TCPSocketOptions, TCPSocketConnectOptions {}
 
 export interface HTTPSSocket extends TLSSocket, TCPSocket {}
 
