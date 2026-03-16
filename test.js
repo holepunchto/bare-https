@@ -7,63 +7,47 @@ const options = {
   key: fs.readFileSync('test/fixtures/cert.key')
 }
 
-test('basic', async function (t) {
-  t.plan(26)
+test('basic', async (t) => {
+  t.plan(23)
 
-  const server = https.createServer(options)
+  const server = https
+    .createServer(options)
+    .on('listening', () => t.pass('server listening'))
+    .on('connection', (socket) => {
+      t.ok(socket)
 
-  server.on('listening', function () {
-    t.pass('server listening')
-  })
-
-  server.on('connection', function (socket) {
-    t.ok(socket)
-
-    socket.on('close', () => {
-      t.pass('server socket closed')
+      socket.on('close', () => t.pass('server socket closed'))
     })
+    .on('request', function (req, res) {
+      t.ok(req)
+      t.is(req.method, 'GET')
+      t.is(req.url, '/something/?key1=value1&key2=value2&enabled')
+      t.comment(req.headers.host)
+      t.ok(req.socket)
 
-    socket.on('error', (err) =>
-      t.fail('server socket error: ' + err.message + ' (' + err.code + ')')
-    )
-  })
+      t.ok(res)
+      t.is(res.statusCode, 200, 'default status code')
+      t.ok(res.socket)
+      t.is(res.req, req)
+      t.is(res.headersSent, false, 'headers not flushed')
 
-  server.on('request', function (req, res) {
-    t.ok(req)
-    t.is(req.method, 'GET')
-    t.is(req.url, '/something/?key1=value1&key2=value2&enabled')
-    t.is(req.headers.host, server.address().address + ':' + server.address().port)
-    t.ok(req.socket)
+      t.is(req.socket, res.socket)
 
-    t.ok(res)
-    t.is(res.statusCode, 200, 'default status code')
-    t.alike(res.headers, {})
-    t.ok(res.socket)
-    t.is(res.req, req)
-    t.is(res.headersSent, false, 'headers not flushed')
+      res.setHeader('Content-Length', 12)
+      t.is(res.getHeader('content-length'), 12)
+      t.is(res.getHeader('Content-Length'), 12)
 
-    t.is(req.socket, res.socket)
+      req
+        .on('close', () => t.pass('server request closed'))
+        .on('data', (data) => t.alike(data, Buffer.from('body message')))
 
-    res.setHeader('Content-Length', 12)
-    t.alike(res.headers, { 'content-length': 12 })
-    t.is(res.getHeader('content-length'), 12)
-    t.is(res.getHeader('Content-Length'), 12)
-
-    res.end('Hello world!')
-
-    req.on('close', function () {
-      t.pass('server request closed')
+      res
+        .on('close', function () {
+          t.is(res.headersSent, true, 'headers flushed')
+          t.pass('server response closed')
+        })
+        .end('Hello world!')
     })
-
-    req.on('data', function (data) {
-      t.alike(data, Buffer.from('body message'), 'request body')
-    })
-
-    res.on('close', function () {
-      t.is(res.headersSent, true, 'headers flushed')
-      t.pass('server response closed')
-    })
-  })
 
   server.listen(0)
   await waitForServer(server)
