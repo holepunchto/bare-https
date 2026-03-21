@@ -1,4 +1,4 @@
-import { TLSSocket, TLSSocketOptions } from 'bare-tls'
+import { TLSSocket, TLSSocketEvents, TLSSocketOptions } from 'bare-tls'
 import {
   HTTPAgent,
   HTTPClientRequest,
@@ -8,30 +8,37 @@ import {
   HTTPServerConnectionOptions,
   HTTPServerResponse
 } from 'bare-http1'
-import { TCPSocket, TCPSocketOptions, TCPSocketConnectOptions } from 'bare-tcp'
+import { TCPSocket, TCPSocketOptions, TCPSocketConnectOptions, TCPSocketEvents } from 'bare-tcp'
+
+export interface HTTPSSocketEvents extends TLSSocketEvents, TCPSocketEvents {}
 
 export interface HTTPSSocketOptions
   extends TLSSocketOptions, TCPSocketOptions, TCPSocketConnectOptions {}
 
-export interface HTTPSSocket extends TLSSocket, TCPSocket {}
+interface HTTPSSocket<M extends HTTPSSocketEvents = HTTPSSocketEvents>
+  extends TLSSocket<M>, TCPSocket<M> {}
 
-class HTTPSSocket extends TLSSocket {}
+declare class HTTPSSocket<M extends HTTPSSocketEvents = HTTPSSocketEvents> extends TLSSocket<M> {}
 
-export interface HTTPSAgent extends HTTPAgent {
+export { type HTTPSSocket }
+
+interface HTTPSAgent extends HTTPAgent {
   createConnection(opts?: HTTPSSocketOptions): HTTPSSocket
 }
 
-class HTTPSAgent extends HTTPAgent {
-  static global: HTTPSAgent
+declare class HTTPSAgent extends HTTPAgent {}
+
+declare namespace HTTPSAgent {
+  export const global: HTTPSAgent
 }
 
 export const globalAgent: HTTPSAgent
 
-export { HTTPSAgent as Agent }
+export { type HTTPSAgent, HTTPSAgent as Agent }
 
-export interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerConnectionOptions {}
+interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerConnectionOptions {}
 
-class HTTPSServer extends HTTPServer {
+declare class HTTPSServer extends HTTPServer {
   constructor(
     opts?: HTTPSServerOptions,
     onrequest?: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void
@@ -40,21 +47,21 @@ class HTTPSServer extends HTTPServer {
   constructor(onrequest: (req: HTTPIncomingMessage, res: HTTPServerResponse) => void)
 }
 
-export { HTTPSServer as Server }
+export { type HTTPSServer, HTTPSServer as Server }
 
-export interface HTTPSClientRequestOptions extends HTTPClientRequestOptions {
+interface HTTPSClientRequestOptions extends HTTPClientRequestOptions {
   agent?: HTTPSAgent | false
 }
 
-export interface HTTPSClientRequest extends HTTPClientRequest {}
+interface HTTPSClientRequest extends HTTPClientRequest {}
 
-class HTTPSClientRequest extends HTTPClientRequest {
+declare class HTTPSClientRequest extends HTTPClientRequest {
   constructor(opts?: HTTPSClientRequestOptions, onresponse?: () => void)
 
   constructor(onresponse: () => void)
 }
 
-export { HTTPClientRequest as ClientRequest }
+export { type HTTPSClientRequest, HTTPSClientRequest as ClientRequest }
 
 export function createServer(
   opts?: HTTPSServerOptions,
