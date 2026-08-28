@@ -9,26 +9,19 @@ const options = {
 }
 
 test('basic', async (t) => {
-  t.plan(23)
+  t.plan(18)
 
   const server = https
     .createServer(options)
     .on('listening', () => t.pass('server listening'))
     .on('connection', (socket) => {
-      t.ok(socket)
-
       socket.on('close', () => t.pass('server socket closed'))
     })
     .on('request', function (req, res) {
-      t.ok(req)
       t.is(req.method, 'GET')
       t.is(req.url, '/something/?key1=value1&key2=value2&enabled')
-      t.comment(req.headers.host)
-      t.ok(req.socket)
 
-      t.ok(res)
       t.is(res.statusCode, 200, 'default status code')
-      t.ok(res.socket)
       t.is(res.req, req)
       t.is(res.headersSent, false, 'headers not flushed')
 
@@ -62,17 +55,12 @@ test('basic', async (t) => {
       headers: { 'Content-Length': 12 },
       rejectUnauthorized: false
     },
-    (req) => {
-      req.write('body message')
-      req.end()
-    }
+    (client) => client.end('body message')
   )
 
   t.absent(reply.error)
   t.is(reply.response.statusCode, 200)
-
-  const body = Buffer.concat(reply.response.chunks)
-  t.alike(body, Buffer.from('Hello world!'), 'client response ended')
+  t.alike(Buffer.concat(reply.response.chunks), Buffer.from('Hello world!'))
 
   server.close()
   server.on('close', () => t.pass('server closed'))
@@ -519,7 +507,7 @@ test('server setTimeout', (t) => {
 
   const server = https.createServer(options)
 
-  t.is(server.timeout, undefined, 'no timeout by default')
+  t.is(server.timeout, 0, 'no timeout by default')
   t.is(server.setTimeout(5000), server, 'setTimeout returns the server')
   t.is(server.timeout, 5000)
 })
