@@ -5,7 +5,7 @@ import {
   HTTPClientRequestOptions,
   HTTPIncomingMessage,
   HTTPServer,
-  HTTPServerConnectionOptions,
+  HTTPServerOptions,
   HTTPServerResponse
 } from 'bare-http1'
 import { TCPSocket, TCPSocketOptions, TCPSocketConnectOptions, TCPSocketEvents } from 'bare-tcp'
@@ -36,7 +36,7 @@ export const globalAgent: HTTPSAgent
 
 export { type HTTPSAgent, HTTPSAgent as Agent }
 
-interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerConnectionOptions {}
+interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerOptions {}
 
 declare class HTTPSServer extends HTTPServer {
   constructor(
@@ -84,6 +84,22 @@ export function request(
 ): HTTPSClientRequest
 
 export function request(
+  opts: HTTPSClientRequestOptions,
+  onresponse?: (res: HTTPIncomingMessage) => void
+): HTTPSClientRequest
+
+export function get(
+  url: URL | string,
+  opts?: HTTPSClientRequestOptions,
+  onresponse?: (res: HTTPIncomingMessage) => void
+): HTTPSClientRequest
+
+export function get(
+  url: URL | string,
+  onresponse: (res: HTTPIncomingMessage) => void
+): HTTPSClientRequest
+
+export function get(
   opts: HTTPSClientRequestOptions,
   onresponse?: (res: HTTPIncomingMessage) => void
 ): HTTPSClientRequest
