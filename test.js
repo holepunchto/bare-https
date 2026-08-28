@@ -1,6 +1,8 @@
 const test = require('brittle')
 const fs = require('bare-fs')
 const http = require('bare-http1')
+const tcp = require('bare-tcp')
+const tls = require('bare-tls')
 const https = require('.')
 
 const options = {
@@ -317,7 +319,7 @@ test('default agent uses port 443', (t) => {
 })
 
 test('server has the same defaults as an HTTP server', async (t) => {
-  t.plan(11)
+  t.plan(13)
 
   const server = https.createServer(options)
 
@@ -326,18 +328,21 @@ test('server has the same defaults as an HTTP server', async (t) => {
   t.is(server.keepAliveTimeout, 5000, 'default keep-alive timeout')
   t.is(server.maxHeaderSize, 16384, 'default max header size')
   t.is(server.maxHeadersCount, 2000, 'default max headers count')
+  t.is(server.maxUpgradeBodySize, 65536, 'default max upgrade body size')
 
   server.headersTimeout = 1000
   server.requestTimeout = 2000
   server.keepAliveTimeout = 3000
   server.maxHeaderSize = 4000
   server.maxHeadersCount = 5000
+  server.maxUpgradeBodySize = 6000
 
   t.is(server.headersTimeout, 1000)
   t.is(server.requestTimeout, 2000)
   t.is(server.keepAliveTimeout, 3000)
   t.is(server.maxHeaderSize, 4000)
   t.is(server.maxHeadersCount, 5000)
+  t.is(server.maxUpgradeBodySize, 6000)
 
   server.listen(0)
 
@@ -584,6 +589,103 @@ test('a request to an IPv6 URL resolves', async (t) => {
 
   server.close(() => t.pass('server closed'))
   server.closeAllConnections()
+})
+
+// The connection reads the limit off whichever server it was made for, so one
+// that does not carry it refuses every upgrade that brings a body along.
+test('an upgrade with a body is handed over', async (t) => {
+  t.plan(3)
+
+  const server = https.createServer(options, (req, res) => res.end('ordinary')).listen(0)
+
+  server.on('upgrade', (req, socket, head) => {
+    const chunks = []
+
+    req
+      .on('data', (data) => chunks.push(data))
+      .on('end', () => {
+        t.alike(Buffer.concat(chunks), Buffer.from('body'), 'the body arrived')
+        t.alike(head, Buffer.from('after'), 'and so did what followed it')
+
+        socket.end(Buffer.from('HTTP/1.1 101 Switching Protocols\r\n\r\n'))
+      })
+  })
+
+  await waitForServer(server)
+
+  const socket = new tls.Socket(
+    tcp.createConnection(server.address().port, server.address().address),
+    { rejectUnauthorized: false }
+  )
+
+  const answered = new Promise((resolve) => {
+    const chunks = []
+
+    socket
+      .on('error', () => {})
+      .on('data', (data) => {
+        chunks.push(data)
+
+        resolve(Buffer.concat(chunks).toString())
+      })
+  })
+
+  socket.write(
+    Buffer.from(
+      'GET /ws HTTP/1.1\r\n' +
+        'Host: localhost\r\n' +
+        'Connection: Upgrade\r\n' +
+        'Upgrade: websocket\r\n' +
+        'Content-Length: 4\r\n' +
+        '\r\n' +
+        'bodyafter'
+    )
+  )
+
+  t.ok((await answered).startsWith('HTTP/1.1 101 '), 'the connection was handed over')
+
+  socket.destroy()
+
+  server.closeAllConnections()
+  server.close()
+})
+
+// The credentials a URL carries are of no use to the peer where they are, so
+// they are sent as a header, as Node.js does.
+test('credentials carried by a URL are sent as an authorization header', async (t) => {
+  t.plan(3)
+
+  const seen = []
+
+  const server = https
+    .createServer(options, (req, res) => {
+      seen.push(req.headers.authorization)
+
+      res.end('response')
+    })
+    .listen(0)
+
+  await waitForServer(server)
+
+  const url = `https://user:pass@localhost:${server.address().port}/`
+
+  await new Promise((resolve) => {
+    https
+      .get(url, { rejectUnauthorized: false, agent: false }, (res) => {
+        res.resume().on('end', resolve)
+      })
+      .on('error', resolve)
+  })
+
+  await request({ ...requestOptions(server), auth: 'user:pass' })
+  await request(requestOptions(server))
+
+  t.is(seen[0], 'Basic dXNlcjpwYXNz', 'the credentials in the URL reach the peer')
+  t.is(seen[1], 'Basic dXNlcjpwYXNz', 'and so do the ones named alongside it')
+  t.is(seen[2], undefined, 'a request that names none sends none')
+
+  server.closeAllConnections()
+  server.close()
 })
 
 function requestOptions(server) {
