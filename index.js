@@ -1,3 +1,5 @@
+const errors = require('bare-http1').errors
+
 exports.Agent = require('./lib/agent')
 exports.globalAgent = exports.Agent.global
 
@@ -13,25 +15,52 @@ exports.request = function request(url, opts, onresponse) {
   if (typeof opts === 'function') {
     onresponse = opts
     opts = {}
+  } else if (opts === undefined || opts === null) {
+    opts = {}
   }
 
   if (typeof url === 'string') url = new URL(url)
 
   if (isURL(url)) {
-    opts = opts ? { ...url, ...opts } : { ...url }
+    // Every part of the URL is only a default that the options given alongside
+    // it may override, as Node.js does.
+    const given = opts
 
-    opts.host = url.hostname
-    opts.path = url.pathname + url.search
-    opts.port = url.port ? parseInt(url.port, 10) : defaultPort(url)
+    opts = { ...url, ...given }
+
+    if (given.protocol === undefined) opts.protocol = url.protocol
+    if (given.path === undefined) opts.path = url.pathname + url.search
+    if (given.port === undefined) opts.port = url.port ? parseInt(url.port, 10) : defaultPort(url)
+
+    // The host may be named either way round, and Node.js resolves `hostname`
+    // ahead of `host`. A URL always carries a hostname, so one the caller named
+    // only as `host` does not displace it. What the caller did name is put back
+    // in case a URL-like object carried its own into the merge.
+    opts.host = given.host
+    opts.hostname = given.hostname === undefined ? hostname(url) : given.hostname
+
+    // A URL may carry credentials, which the request sends as an
+    // `Authorization` header, as Node.js does.
+    if (opts.auth === undefined && (url.username || url.password)) {
+      opts.auth = `${decodeURIComponent(url.username)}:${decodeURIComponent(url.password)}`
+    }
   } else {
-    opts = url ? { ...url } : {}
-
-    // For Node.js compatibility
-    opts.host = opts.hostname || opts.host
-    opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
+    opts = { ...url }
   }
 
+  // For Node.js compatibility
+  opts.host = opts.hostname || opts.host
+  opts.port = typeof opts.port === 'string' ? parseInt(opts.port, 10) : opts.port
+
+  validateProtocol(opts.protocol)
+
   return new exports.ClientRequest(opts, onresponse)
+}
+
+exports.get = function get(url, opts, onresponse) {
+  const req = exports.request(url, opts, onresponse)
+  req.end()
+  return req
 }
 
 // https://url.spec.whatwg.org/#default-port
@@ -48,6 +77,20 @@ function defaultPort(url) {
   }
 
   return null
+}
+
+function validateProtocol(protocol) {
+  if (protocol === undefined || protocol === null) return
+
+  if (protocol !== 'https:' && protocol !== 'wss:') {
+    throw errors.INVALID_PROTOCOL(`Unsupported protocol: ${JSON.stringify(protocol)}`)
+  }
+}
+
+function hostname(url) {
+  const host = url.hostname
+
+  return host.charCodeAt(0) === 91 /* [ */ ? host.slice(1, -1) : host
 }
 
 // https://url.spec.whatwg.org/#api
