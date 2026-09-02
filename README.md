@@ -34,6 +34,10 @@ server.listen(0, () => {
 })
 ```
 
+## API
+
+See the [`bare-https` reference](https://docs.pears.com/reference/bare/modules/bare-https).
+
 ## License
 
 Apache-2.0
