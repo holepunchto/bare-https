@@ -862,8 +862,8 @@ function request(opts, cb) {
   return new Promise((resolve) => {
     const client = https.request(opts)
 
-    // Assigned by the agent while the request is being constructed, so it is
-    // already in hand here.
+    // A new socket is assigned while the request is being constructed, but a
+    // pooled one only a little later, so it is taken again on response.
     const result = { statusCode: 0, error: null, response: null, socket: client.socket }
 
     client.on('error', function (err) {
@@ -871,6 +871,8 @@ function request(opts, cb) {
     })
 
     client.on('response', function (res) {
+      result.socket = client.socket
+
       const r = (result.response = {
         statusCode: res.statusCode,
         headers: res.headers,
