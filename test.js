@@ -150,6 +150,143 @@ test('certificate is verified by default', async (t) => {
   })
 })
 
+test('server emits connection at TCP accept and secureConnection after the TLS handshake', async (t) => {
+  t.plan(3)
+
+  const events = []
+
+  const server = https
+    .createServer(options, (req, res) => {
+      events.push('request')
+      res.end()
+    })
+    .on('connection', (socket) => {
+      events.push('connection')
+      t.absent(socket.encrypted, 'connection gets the TCP socket')
+    })
+    .on('secureConnection', () => events.push('secureConnection'))
+    .listen(0)
+
+  await waitForServer(server)
+
+  await request({ ...requestOptions(server), agent: false })
+
+  t.alike(events, ['connection', 'secureConnection', 'request'])
+
+  server.close(() => t.pass('server closed'))
+})
+
+test('client socket emits connect at TCP connect and secureConnect after the TLS handshake', async (t) => {
+  t.plan(2)
+
+  const server = https.createServer(options, (req, res) => res.end()).listen(0)
+
+  await waitForServer(server)
+
+  const events = []
+
+  await request({ ...requestOptions(server), agent: false }, (client) => {
+    client.socket
+      .on('connect', () => events.push('connect'))
+      .on('secureConnect', () => events.push('secureConnect'))
+
+    client.end()
+  })
+
+  t.alike(events, ['connect', 'secureConnect'])
+
+  server.close(() => t.pass('server closed'))
+})
+
+test('server emits tlsClientError when a peer leaves before the TLS handshake', async (t) => {
+  t.plan(2)
+
+  const server = https
+    .createServer(options, () => t.fail('request received'))
+    .on('clientError', () => t.fail('client error'))
+    .on('tlsClientError', (err) => {
+      t.is(err.code, 'ECONNRESET')
+
+      socket.destroy()
+      server.close(() => t.pass('server closed'))
+    })
+    .listen(0)
+
+  await waitForServer(server)
+
+  const socket = tcp
+    .createConnection(server.address().port, server.address().address)
+    .on('error', () => {})
+    .end()
+})
+
+test('server emits tlsClientError when the TLS handshake times out', async (t) => {
+  t.plan(2)
+
+  const server = https
+    .createServer({ ...options, handshakeTimeout: 100 }, () => t.fail('request received'))
+    .on('tlsClientError', (err) => {
+      t.is(err.code, 'HANDSHAKE_TIMEOUT')
+
+      socket.destroy()
+      server.close(() => t.pass('server closed'))
+    })
+    .listen(0)
+
+  await waitForServer(server)
+
+  const socket = tcp
+    .createConnection(server.address().port, server.address().address)
+    .on('error', () => {})
+})
+
+test('closing the server does not report a connection mid-handshake as a client error', async (t) => {
+  t.plan(1)
+
+  const server = https
+    .createServer(options, () => t.fail('request received'))
+    .on('tlsClientError', () => t.fail('tls client error'))
+    .listen(0)
+
+  await waitForServer(server)
+
+  const socket = tcp
+    .createConnection(server.address().port, server.address().address)
+    .on('error', () => {})
+
+  await waitForConnections(server, 1)
+
+  server.close(() => {
+    socket.destroy()
+
+    // The TLS socket only learns that the connection is gone after the server
+    // does, so give it the chance to report it before the test ends.
+    setTimeout(() => t.pass('server closed'), 100)
+  })
+})
+
+test('request times out when the socket goes quiet', async (t) => {
+  t.plan(2)
+
+  const server = https.createServer(options, () => {}).listen(0)
+
+  await waitForServer(server)
+
+  const req = https.request({ ...requestOptions(server), agent: false, timeout: 100 })
+
+  req
+    .on('timeout', () => {
+      t.pass('request timed out')
+      req.destroy()
+    })
+    .on('error', () => {})
+    .on('close', () => {
+      server.close(() => t.pass('server closed'))
+      server.closeAllConnections()
+    })
+    .end()
+})
+
 test('plaintext server is refused', async (t) => {
   t.plan(3)
 

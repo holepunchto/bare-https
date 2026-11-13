@@ -5,6 +5,7 @@ import {
   HTTPClientRequestOptions,
   HTTPIncomingMessage,
   HTTPServer,
+  HTTPServerEvents,
   HTTPServerOptions,
   HTTPServerResponse
 } from 'bare-http1'
@@ -57,9 +58,24 @@ export const globalAgent: HTTPSAgent
 
 export { type HTTPSAgent, HTTPSAgent as Agent }
 
-interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerOptions {}
+/** Options for `HTTPSServer`: those of `HTTPSSocket` combined with `bare-http1`'s server options. */
+interface HTTPSServerOptions extends HTTPSSocketOptions, HTTPServerOptions {
+  /**
+   * How long in milliseconds a peer may take to finish the TLS handshake before the connection is
+   * destroyed and `'tlsClientError'` is emitted. `0` disables it. Defaults to `120000`.
+   */
+  handshakeTimeout?: number
+}
 
-declare class HTTPSServer extends HTTPServer {
+/** The events an `HTTPSServer` emits: those of `HTTPServer` plus the TLS handshake events. */
+export interface HTTPSServerEvents extends HTTPServerEvents {
+  /** Emitted with the TLS socket once the TLS handshake of a new connection completes. */
+  secureConnection: [socket: HTTPSSocket]
+  /** Emitted when a new connection fails before the TLS handshake completes. */
+  tlsClientError: [err: Error, socket: HTTPSSocket]
+}
+
+declare class HTTPSServer extends HTTPServer<HTTPSServerEvents> {
   /**
    * @param opts - Server options: TLS socket options (for example `cert`, `key`) plus `bare-http1`
    * server connection options.

@@ -32,7 +32,7 @@
   "dependencies": {
     "bare-http1": "^4.4.0",
     "bare-tcp": "^2.2.0",
-    "bare-tls": "^3.0.0"
+    "bare-tls": "^4.0.0"
   },
   "devDependencies": {
     "bare-fs": "^4.0.0",
